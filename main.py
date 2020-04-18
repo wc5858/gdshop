@@ -25,13 +25,13 @@ def get_window_info():
 def click(window_size, x, y):
     win32api.SetCursorPos((window_size[0] + x, window_size[1] + y))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, window_size[0] + x, window_size[1] + y, 0, 0)
-    time.sleep(0.05)
+    time.sleep(0.2)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, window_size[0] + x, window_size[1] + y, 0, 0)
 
 def r_click(window_size, x, y):
     win32api.SetCursorPos((window_size[0] + x, window_size[1] + y))
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, window_size[0] + x, window_size[1] + y, 0, 0)
-    time.sleep(0.05)
+    time.sleep(0.1)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, window_size[0] + x, window_size[1] + y, 0, 0)
 
 def world_trans(window_size):
@@ -88,6 +88,7 @@ def buy_green(window_size):
     time.sleep(0.1)
     store = [[0 for i in range(10)] for j in range(10)]
     for i in range(10):
+        last_empty = 0
         for j in range(10):
             if store[i][j] == 1:
                 continue
@@ -100,19 +101,30 @@ def buy_green(window_size):
             # img.save(addr, 'png')
             res = pytesseract.image_to_string(img, lang='eng')
             if res == '':
-                return
+                if last_empty == 2:
+                    return
+                else:
+                    last_empty += 1
+            else:
+                last_empty = 0
             if 'Rare Shield' in res:
+                last_empty = 0
                 for m in range(3):
                     for n in range(2):
-                        store[i + m][j + n] = 1
+                        if (i + m) < 10 and (j + n) < 10:
+                            store[i + m][j + n] = 1
             elif 'Off-Hand' in res:
+                last_empty = 0
                 for m in range(2):
                     for n in range(2):
-                        store[i + m][j + n] = 1
+                        if (i + m) < 10 and (j + n) < 10:
+                            store[i + m][j + n] = 1
             else:
-                return
+                if last_empty == 2:
+                    return
+                else:
+                    last_empty += 1
             if check_buy(res) == 1:
-                print(res)
                 r_click(window_size, x, y)
                 time.sleep(0.1)
 
@@ -138,23 +150,36 @@ def buy_material(window_size):
                     return
                 else:
                     last_empty = 1
+            else:
+                last_empty = 0
             # print(res)
-            if ('enged Plating' in res) or ('Aether Crystal' in res):
+            if 'enged Plating' in res:
+                if not('enged Plating (1)' in res):
+                    r_click(window_size, x, y)
+            if 'Aether Crystal' in res:
                 r_click(window_size, x, y)
             if 'Scrap' in res:
                 for m in range(2):
                     for n in range(2):
-                        store[i + m][j + n] = 1
+                        if (i + m) < 10 and (j + n) < 10:
+                            store[i + m][j + n] = 1
                 r_click(window_size, x, y)
-            if ('Aether Cluster' in res) or ('Aether Shard' in res):
-                store[i + 1][j] = 1
+            # if ('Aether Cluster' in res) or ('Aether Shard' in res):
+            if ('Aether Shard' in res):
+                if i< 9:
+                    store[i + 1][j] = 1
                 r_click(window_size, x, y)
             time.sleep(0.1)
 
 if __name__=="__main__":
     window_size = get_window_info()
     while(1):
-        world_trans(window_size)
-        open_store(window_size)
-        buy_green(window_size)
-        buy_material(window_size)
+        try:
+            world_trans(window_size)
+            open_store(window_size)
+            buy_green(window_size)
+            buy_material(window_size)
+        except:
+            win32api.keybd_event(27, 1, 0, 0)  # 按m
+            time.sleep(0.1)
+            win32api.keybd_event(27, 1, win32con.KEYEVENTF_KEYUP, 0)
